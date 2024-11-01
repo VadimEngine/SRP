@@ -1,0 +1,115 @@
+#define FLT_MAX 3.402823466e+38 // Standard maximum float value
+
+#pragma kernel CSMain
+
+RWTexture2D<float4> resultTexture;
+int textureWidth;
+int textureHeight;
+
+// Sphere data buffers
+StructuredBuffer<float3> sphereCenters;
+StructuredBuffer<float> sphereRadii;
+StructuredBuffer<float3> sphereColors;
+int sphereCount;
+
+// Camera and lighting data
+float4x4 viewMatrix; // View matrix from the camera
+float3 lightDirection;
+
+// Calculate ray-sphere intersection
+bool IntersectSphere(float3 rayOrigin, float3 rayDir, float3 sphereCenter, float sphereRadius, out float hitDistance)
+{
+    float3 oc = rayOrigin - sphereCenter;
+    float a = dot(rayDir, rayDir);
+    float b = 2.0 * dot(oc, rayDir);
+    float c = dot(oc, oc) - sphereRadius * sphereRadius;
+    float discriminant = b * b - 4.0 * a * c;
+
+    if (discriminant < 0)
+    {
+        hitDistance = 0;
+        return false;
+    }
+    else
+    {
+        hitDistance = (-b - sqrt(discriminant)) / (2.0 * a);
+        return true;
+    }
+}
+
+// Function to trace a ray and determine the closest sphere hit
+bool TraceRay(float3 rayOrigin, float3 rayDir, out float3 hitColor, out float3 hitPoint, out float3 hitNormal)
+{
+    float closestHit = FLT_MAX;
+    hitColor = float3(0, 0, 0);
+    bool hitDetected = false;
+
+    for (int i = 0; i < sphereCount; i++)
+    {
+        // Use the sphere center directly; assume it's in world space
+        float3 spherePosition = sphereCenters[i];
+
+        float hitDistance;
+        if (IntersectSphere(rayOrigin, rayDir, spherePosition, sphereRadii[i], hitDistance) && hitDistance < closestHit)
+        {
+            closestHit = hitDistance;
+            hitDetected = true;
+
+            // Calculate hit point in world space
+            hitPoint = rayOrigin + rayDir * hitDistance;
+
+            // Calculate the normal in world space
+            hitNormal = normalize(hitPoint - spherePosition);
+            float brightness = max(dot(hitNormal, lightDirection), 0);
+            hitColor = sphereColors[i] * brightness;
+        }
+    }
+
+    return hitDetected;
+}
+
+[numthreads(8, 8, 1)]
+void CSMain(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= textureWidth || id.y >= textureHeight)
+        return;
+
+    float2 uv = (float2(id.x, id.y) / float2(textureWidth, textureHeight)) * 2.0 - 1.0;
+    uv.x *= (float)textureWidth / textureHeight;
+
+    // Define the primary ray direction from the camera through this pixel
+    float3 rayDir = normalize(float3(uv, 1.0));
+
+    // Transform the ray direction to world space using the view matrix
+    float3 worldRayDir = normalize(mul((float3x3)viewMatrix, rayDir));
+
+    // Camera position in world space (inverse of the view matrix)
+    float4 viewRayOrigin = mul(viewMatrix, float4(0.0, 0.0, 0.0, 1.0)); // Camera position in view space
+    float3 rayOrigin = viewRayOrigin.xyz; // This is the camera's position in world space
+
+    float3 primaryHitColor;
+    float3 hitPoint, hitNormal;
+
+    // Trace the primary ray
+    if (TraceRay(rayOrigin, worldRayDir, primaryHitColor, hitPoint, hitNormal))
+    {
+        float3 finalColor = primaryHitColor;
+
+        // Reflective ray
+        float3 reflectDir = reflect(worldRayDir, hitNormal);
+        float3 reflectionColor;
+        float3 reflectionHitPoint, reflectionHitNormal;
+
+        if (TraceRay(hitPoint + reflectDir * 0.001f, reflectDir, reflectionColor, reflectionHitPoint, reflectionHitNormal))
+        {
+            finalColor = lerp(primaryHitColor, reflectionColor, 0.01f); // Blend reflection color with primary hit color
+        }
+
+        resultTexture[id.xy] = float4(finalColor, 1.0);
+    }
+    else
+    {
+        // Background color
+        resultTexture[id.xy] = float4(0.0, 0.0, 0.0, 0.0);
+    }
+}
