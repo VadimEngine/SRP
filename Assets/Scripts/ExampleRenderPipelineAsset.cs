@@ -17,6 +17,7 @@ public class ExampleRenderPipelineInstance : RenderPipeline
 
     public ExampleRenderPipelineInstance(ExampleRenderPipelineAsset asset)
     {
+        Application.targetFrameRate = 60;
         renderPipelineAsset = asset;
         rayTracingShader = renderPipelineAsset.rayTracingShader;
 
@@ -69,8 +70,6 @@ public class ExampleRenderPipelineInstance : RenderPipeline
             var filteringSettings = FilteringSettings.defaultValue;
 
             context.DrawRenderers(cullingResults, ref drawingSettings, ref filteringSettings);
-
-            DrawWireframe(context, camera);
 
             // Now overlay the ray-tracing result without clearing again
             DrawRayTracingResult(context, camera);
@@ -146,35 +145,4 @@ public class ExampleRenderPipelineInstance : RenderPipeline
         if (sphereColorBuffer != null)
             sphereColorBuffer.Release();
     }
-
-    private void DrawWireframe(ScriptableRenderContext context, Camera camera)
-    {
-        // Set up the command buffer for wireframe rendering
-        CommandBuffer cmd = new CommandBuffer { name = "Draw Wireframe" };
-        context.ExecuteCommandBuffer(cmd);
-
-        // Set the shader for wireframe rendering
-        var wireframeMaterial = new Material(Shader.Find("Custom/WireframeShader"));
-        
-        // Set up culling parameters
-        camera.TryGetCullingParameters(out var cullingParameters);
-        var cullingResults = context.Cull(ref cullingParameters);
-        
-        // Define the drawing settings for wireframe rendering
-        ShaderTagId shaderTagId = new ShaderTagId("Wireframe");
-        var sortingSettings = new SortingSettings(camera);
-        var drawingSettings = new DrawingSettings(shaderTagId, sortingSettings);
-        drawingSettings.overrideMaterial = wireframeMaterial; // Use wireframe material
-
-        // Set up filtering settings
-        var filteringSettings = FilteringSettings.defaultValue;
-
-        // Draw the wireframe
-        context.DrawRenderers(cullingResults, ref drawingSettings, ref filteringSettings);
-
-        // Execute the command buffer
-        context.ExecuteCommandBuffer(cmd);
-        cmd.Release();
-    }
 }
-

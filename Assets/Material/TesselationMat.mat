@@ -78,19 +78,22 @@ Material:
     - _Mode: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.02
+    - _Shininess: 1.17
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 1
-    - _Tess: 1.7
+    - _Tess: 4.8
     - _UVSec: 0
-    - _WaveFrequency: 2
-    - _WaveHeight: 1
+    - _WaveFrequency: 27.95
+    - _WaveHeight: 0.05
     - _WireThickness: 1.39
     - _Wireframe: 3.4
     - _ZWrite: 1
     m_Colors:
-    - _Color: {r: 0.8584906, g: 0.5547793, b: 0.5547793, a: 1}
+    - _Color: {r: 0, g: 0, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
+    - _LightDir: {r: 0, g: -1, b: 0, a: 0}
     - _SpecColor: {r: 1, g: 0.5518868, b: 0.5518868, a: 0.5}
+    - _SpecularColor: {r: 1, g: 1, b: 1, a: 0}
     - _WireColor: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
